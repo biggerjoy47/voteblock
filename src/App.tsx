@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthContext, useAuthProvider } from './hooks/useAuth';
 import { SecureStorageService } from './services/secureStorageService';
 import { BlockchainService } from './services/blockchainService';

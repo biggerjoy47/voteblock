@@ -23,7 +23,7 @@ export class ElectionService {
       type: 'election_created',
       electionId: election.id,
       title: election.title,
-      type: election.type,
+      electionType: election.type,
       timestamp: new Date()
     });
 
@@ -271,6 +271,7 @@ export class ElectionService {
       userId,
       action,
       details,
+      result: 'success',
       timestamp: new Date()
     };
 
