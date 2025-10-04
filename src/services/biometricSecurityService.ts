@@ -3,7 +3,6 @@ import { BiometricData } from '../types/voter';
 import { CryptoSecurityService } from './cryptoSecurityService';
 
 export class BiometricSecurityService {
-  private static model: any = null;
   private static isModelLoaded = false;
   
   // Enhanced security thresholds
@@ -119,7 +118,7 @@ export class BiometricSecurityService {
   /**
    * Advanced blink detection with eye aspect ratio analysis
    */
-  private static async detectAdvancedBlink(videoElement: HTMLVideoElement): Promise<any> {
+  private static async detectAdvancedBlink(_videoElement: HTMLVideoElement): Promise<any> {
     // Simulate advanced blink detection
     // In production, this would use actual computer vision algorithms
     const ratios: number[] = [];
@@ -230,7 +229,7 @@ export class BiometricSecurityService {
   private static async generateSecureFaceEmbedding(imageTensor: tf.Tensor): Promise<number[]> {
     try {
       // Preprocess image
-      const resized = tf.image.resizeBilinear(imageTensor, [224, 224]);
+      const resized = tf.image.resizeBilinear(imageTensor as tf.Tensor3D, [224, 224]);
       const normalized = resized.div(255.0);
       
       // Generate embedding (simulated - in production use actual model)
@@ -323,27 +322,27 @@ export class BiometricSecurityService {
   private static async detectEdges(imageTensor: tf.Tensor): Promise<tf.Tensor> {
     // Simplified edge detection - in production use proper Sobel/Canny operators
     const kernel = tf.tensor2d([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]]);
-    const edges = tf.conv2d(imageTensor.expandDims(0), kernel.expandDims(-1).expandDims(-1), 1, 'same');
+    const edges = tf.conv2d((imageTensor as tf.Tensor3D).expandDims(0), kernel.expandDims(-1).expandDims(-1), 1, 'same');
     kernel.dispose();
     return edges.squeeze();
   }
 
-  private static async analyzeFrequencyDomain(imageTensor: tf.Tensor): Promise<boolean> {
+  private static async analyzeFrequencyDomain(_imageTensor: tf.Tensor): Promise<boolean> {
     // Simulate frequency domain analysis
     return Math.random() > 0.2; // 80% pass rate
   }
 
-  private static async analyzeColorSpaces(imageTensor: tf.Tensor): Promise<boolean> {
+  private static async analyzeColorSpaces(_imageTensor: tf.Tensor): Promise<boolean> {
     // Simulate color space analysis
     return Math.random() > 0.15; // 85% pass rate
   }
 
-  private static async analyzeMicroTextures(imageTensor: tf.Tensor): Promise<boolean> {
+  private static async analyzeMicroTextures(_imageTensor: tf.Tensor): Promise<boolean> {
     // Simulate micro-texture analysis
     return Math.random() > 0.25; // 75% pass rate
   }
 
-  private static async detectHeadMovement(videoElement: HTMLVideoElement): Promise<boolean> {
+  private static async detectHeadMovement(_videoElement: HTMLVideoElement): Promise<boolean> {
     // Simulate head movement detection
     return Math.random() > 0.3; // 70% success rate
   }
@@ -360,9 +359,9 @@ export class BiometricSecurityService {
     return totalWeight > 0 ? score / totalWeight : 0;
   }
 
-  private static async calculateConfidenceScore(imageTensor: tf.Tensor): Promise<number> {
+  private static async calculateConfidenceScore(_imageTensor: tf.Tensor): Promise<number> {
     // Simulate confidence calculation based on image quality
-    const mean = tf.mean(imageTensor);
+    const mean = tf.mean(_imageTensor);
     const meanValue = await mean.data();
     mean.dispose();
     
@@ -370,7 +369,7 @@ export class BiometricSecurityService {
     return Math.min(0.95, Math.max(0.6, meanValue[0] / 255 + Math.random() * 0.2));
   }
 
-  private static async assessBiometricQuality(imageTensor: tf.Tensor, livenessTests: any): Promise<number> {
+  private static async assessBiometricQuality(_imageTensor: tf.Tensor, livenessTests: any): Promise<number> {
     // Combine multiple quality factors
     const sharpness = Math.random() * 0.3 + 0.7; // Simulate sharpness score
     const lighting = Math.random() * 0.2 + 0.8; // Simulate lighting score
@@ -379,8 +378,8 @@ export class BiometricSecurityService {
     return (sharpness + lighting + livenessQuality) / 3;
   }
 
-  private static async assessCaptureEnvironment(imageTensor: tf.Tensor): Promise<any> {
-    const mean = tf.mean(imageTensor);
+  private static async assessCaptureEnvironment(_imageTensor: tf.Tensor): Promise<any> {
+    const mean = tf.mean(_imageTensor);
     const meanValue = await mean.data();
     mean.dispose();
     

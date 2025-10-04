@@ -1,13 +1,9 @@
 import * as tf from '@tensorflow/tfjs';
 import { BiometricData } from '../types';
 import { CryptoService } from './cryptoService';
-import { AuditService } from './auditService';
 
 export class BiometricService {
-  private static model: any = null;
   private static isModelLoaded = false;
-  private static eyeAspectRatios: number[] = [];
-  private static blinkThreshold = 0.25;
   private static minBlinkDuration = 100; // milliseconds
   private static maxBlinkDuration = 400; // milliseconds
 
@@ -105,7 +101,7 @@ export class BiometricService {
   /**
    * Enhanced blink detection with eye aspect ratio analysis
    */
-  private static async detectEnhancedBlink(videoElement: HTMLVideoElement): Promise<{
+  private static async detectEnhancedBlink(_videoElement: HTMLVideoElement): Promise<{
     detected: boolean;
     blinkCount: number;
     eyeAspectRatios: number[];
@@ -156,7 +152,7 @@ export class BiometricService {
   /**
    * Simulate head movement detection
    */
-  private static async detectHeadMovement(videoElement: HTMLVideoElement): Promise<boolean> {
+  private static async detectHeadMovement(_videoElement: HTMLVideoElement): Promise<boolean> {
     // In a real implementation, this would track facial landmarks over time
     // For simulation, we'll use a random success rate
     return Math.random() > 0.3; // 70% success rate
@@ -208,7 +204,7 @@ export class BiometricService {
   private static async generateFaceEmbedding(imageTensor: tf.Tensor): Promise<number[]> {
     // Simulate face embedding generation
     // In a real implementation, this would use a proper face recognition model
-    const resized = tf.image.resizeBilinear(imageTensor, [224, 224]);
+    const resized = tf.image.resizeBilinear(imageTensor as tf.Tensor3D, [224, 224]);
     const normalized = resized.div(255.0);
     
     // Simulate embedding extraction

@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Eye, CheckCircle, AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react';
 import { VoterDatabaseService } from '../../services/voterDatabaseService';
-import { BiometricService } from '../../services/biometricService';
+import { BiometricSecurityService } from '../../services/biometricSecurityService';
 
 interface BiometricVerificationProps {
   onNavigate: (view: string) => void;
-  onVerificationSuccess: () => void;
+  onVerificationSuccess: (biometricData?: { embedding: number[]; qualityScore: number; livenessScore: number }) => void;
   nin: string;
   mode: 'login' | 'register';
 }
@@ -19,7 +19,6 @@ export const BiometricVerification: React.FC<BiometricVerificationProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [isCapturing, setIsCapturing] = useState(false);
   const [captureStep, setCaptureStep] = useState<'ready' | 'capturing' | 'processing' | 'complete'>('ready');
   const [livenessTests, setLivenessTests] = useState({
     blinkDetected: false,
@@ -64,54 +63,80 @@ export const BiometricVerification: React.FC<BiometricVerificationProps> = ({
   };
 
   const startBiometricCapture = async () => {
-    setIsCapturing(true);
     setCaptureStep('capturing');
     setError('');
     setInstructions('Please look directly at the camera and blink naturally');
 
     try {
-      // Step 1: Blink Detection
-      setInstructions('Please blink 2-3 times naturally');
-      await simulateLivenessTest('blink', 3000);
-      setLivenessTests(prev => ({ ...prev, blinkDetected: true }));
+      if (!videoRef.current || !canvasRef.current) {
+        throw new Error('Camera not initialized');
+      }
 
-      // Step 2: Head Movement
-      setInstructions('Please turn your head slightly left, then right');
-      await simulateLivenessTest('movement', 3000);
-      setLivenessTests(prev => ({ ...prev, headMovement: true }));
+      // Step 1: Capture and analyze biometric data
+      setInstructions('Analyzing facial features and liveness...');
+      
+      const biometricResult = await BiometricSecurityService.captureAndAnalyzeBiometric(
+        videoRef.current,
+        canvasRef.current
+      );
 
-      // Step 3: Quality Check
-      setInstructions('Hold still while we verify image quality');
-      await simulateLivenessTest('quality', 2000);
-      setLivenessTests(prev => ({ ...prev, qualityCheck: true }));
+      if (!biometricResult.success) {
+        throw new Error(biometricResult.error || 'Biometric capture failed');
+      }
 
-      // Step 4: Processing
+      // Update liveness test results based on actual analysis
+      setLivenessTests({
+        blinkDetected: biometricResult.livenessScore! >= 0.7,
+        headMovement: biometricResult.livenessScore! >= 0.7,
+        qualityCheck: biometricResult.qualityScore! >= 0.8
+      });
+
+      // Step 2: Verify quality and liveness thresholds
+      if (biometricResult.qualityScore! < 0.8) {
+        throw new Error('Image quality too low. Please ensure good lighting and clear view of your face.');
+      }
+
+      if (biometricResult.livenessScore! < 0.7) {
+        throw new Error('Liveness check failed. Please ensure you are a live person and not a photo or video.');
+      }
+
+      // Step 3: Processing
       setCaptureStep('processing');
       setInstructions('Processing biometric data...');
       
       if (mode === 'login') {
-        // Authenticate existing voter
-        const fakeEmbedding = Array.from({length: 128}, () => Math.random());
-        const authResult = await VoterDatabaseService.authenticateVoter(nin, fakeEmbedding);
+        // Authenticate existing voter with captured biometric embedding
+        const authResult = await VoterDatabaseService.authenticateVoter(
+          nin, 
+          biometricResult.embedding!
+        );
         
         if (!authResult.success) {
-          throw new Error(authResult.error || 'Authentication failed');
+          throw new Error(authResult.error || 'Authentication failed - face does not match registered data');
         }
-      } else {
-        // For registration, we'll store the biometric data in the next step
-        await new Promise(resolve => setTimeout(resolve, 1500));
       }
 
-      // Step 5: Complete
+      // Step 4: Complete
       setCaptureStep('complete');
       setInstructions(mode === 'login' ? 'Authentication successful!' : 'Biometric data captured successfully!');
       
       // Auto-proceed after success
       setTimeout(() => {
-        onVerificationSuccess();
+        if (mode === 'register') {
+          // Pass the captured biometric data back to parent for registration
+          onVerificationSuccess({
+            embedding: biometricResult.embedding!,
+            qualityScore: biometricResult.qualityScore!,
+            livenessScore: biometricResult.livenessScore!
+          });
+        } else {
+          // For login, no data needed
+          onVerificationSuccess();
+        }
       }, 1500);
 
     } catch (error) {
+      console.error('Biometric capture error:', error);
       setError(error instanceof Error ? error.message : 'Biometric capture failed. Please try again.');
       setCaptureStep('ready');
       setInstructions('Position your face in the center and click Start Capture');
@@ -120,22 +145,7 @@ export const BiometricVerification: React.FC<BiometricVerificationProps> = ({
         headMovement: false,
         qualityCheck: false
       });
-    } finally {
-      setIsCapturing(false);
     }
-  };
-
-  const simulateLivenessTest = (test: string, duration: number): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Simulate success rate (90% for demo)
-        if (Math.random() > 0.1) {
-          resolve();
-        } else {
-          reject(new Error(`${test} test failed`));
-        }
-      }, duration);
-    });
   };
 
   const resetCapture = () => {

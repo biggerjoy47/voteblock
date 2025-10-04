@@ -1,6 +1,8 @@
 import { StorageService } from './storageService';
 import { CryptoService } from './cryptoService';
 import { AuditService } from './auditService';
+import { TransactionManager } from './transactionManager';
+import { EnhancedBlockchainService } from './enhancedBlockchainService';
 
 export interface VoterRecord {
   id: string;
@@ -136,6 +138,34 @@ export class VoterDatabaseService {
           registrationSource: voter.registrationSource
         }
       );
+
+      // Create blockchain transaction for voter registration
+      try {
+        const transaction = await TransactionManager.createTransaction(
+          'voter_register',
+          'system',
+          {
+            voterId: voter.id,
+            ninHash: voter.ninHash,
+            firstName: voter.firstName,
+            lastName: voter.lastName,
+            state: voter.state,
+            lga: voter.lga,
+            ward: voter.ward,
+            pollingUnit: voter.pollingUnit,
+            registrationDate: voter.registrationDate,
+            biometricHash: voter.biometricHash
+          }
+        );
+
+        await TransactionManager.submitTransaction(transaction);
+        
+        // Process transaction batch if enough pending transactions
+        await EnhancedBlockchainService.processTransactionBatch();
+      } catch (blockchainError) {
+        console.error('Failed to record voter registration on blockchain:', blockchainError);
+        // Continue anyway - voter is registered in database
+      }
 
       return { success: true, voter };
     } catch (error) {
@@ -396,7 +426,7 @@ export class VoterDatabaseService {
   /**
    * Update voter's eligible elections when admin creates/activates elections
    */
-  static async updateVoterEligibility(electionId: string, electionType: string, state?: string, lga?: string): Promise<void> {
+  static async updateVoterEligibility(electionId: string, _electionType: string, state?: string, lga?: string): Promise<void> {
     try {
       const allVoters = await StorageService.getAllFromStore(this.VOTER_STORE) as VoterRecord[];
       

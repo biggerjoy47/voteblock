@@ -1,6 +1,7 @@
 import { Election, Candidate, Vote, ElectionResult, AuditLog } from '../types';
 import { StorageService } from './storageService';
-import { BlockchainService } from './blockchainService';
+import { TransactionManager } from './transactionManager';
+import { EnhancedBlockchainService } from './enhancedBlockchainService';
 import { CryptoService } from './cryptoService';
 import { VoterDatabaseService } from './voterDatabaseService';
 
@@ -18,14 +19,26 @@ export class ElectionService {
     // Auto-assign eligible voters based on election scope
     await this.assignEligibleVoters(election);
     
-    // Add to blockchain
-    await BlockchainService.addBlock({
-      type: 'election_created',
-      electionId: election.id,
-      title: election.title,
-      electionType: election.type,
-      timestamp: new Date()
-    });
+    // Create blockchain transaction for election creation
+    try {
+      const transaction = await TransactionManager.createTransaction(
+        'election_create',
+        election.createdBy,
+        {
+          electionId: election.id,
+          title: election.title,
+          electionType: election.type,
+          state: election.state,
+          lga: election.lga,
+          startDate: election.startDate,
+          endDate: election.endDate
+        }
+      );
+      await TransactionManager.submitTransaction(transaction);
+      await EnhancedBlockchainService.processTransactionBatch();
+    } catch (blockchainError) {
+      console.error('Failed to record election creation on blockchain:', blockchainError);
+    }
 
     // Log audit
     await this.logAudit('election_created', `Election created: ${election.title}`, election.createdBy);
@@ -56,13 +69,24 @@ export class ElectionService {
         updatedElection.lga
       );
     }
-    // Add to blockchain
-    await BlockchainService.addBlock({
-      type: 'election_updated',
-      electionId: electionId,
-      updates: updates,
-      timestamp: new Date()
-    });
+    
+    // Create blockchain transaction for election update
+    try {
+      const transaction = await TransactionManager.createTransaction(
+        'election_update',
+        userId,
+        {
+          electionId: electionId,
+          updates: updates,
+          previousStatus: existingElection.status,
+          newStatus: updatedElection.status
+        }
+      );
+      await TransactionManager.submitTransaction(transaction);
+      await EnhancedBlockchainService.processTransactionBatch();
+    } catch (blockchainError) {
+      console.error('Failed to record election update on blockchain:', blockchainError);
+    }
 
     await this.logAudit('election_updated', `Election updated: ${updatedElection.title}`, userId);
 
@@ -130,15 +154,24 @@ export class ElectionService {
 
     await StorageService.addToStore('candidates', candidate);
 
-    // Add to blockchain
-    await BlockchainService.addBlock({
-      type: 'candidate_added',
-      candidateId: candidate.id,
-      electionId: candidate.electionId,
-      candidateName: candidate.name,
-      party: candidate.party,
-      timestamp: new Date()
-    });
+    // Create blockchain transaction for candidate addition
+    try {
+      const transaction = await TransactionManager.createTransaction(
+        'election_update',
+        'system',
+        {
+          type: 'candidate_added',
+          candidateId: candidate.id,
+          electionId: candidate.electionId,
+          candidateName: candidate.name,
+          party: candidate.party
+        }
+      );
+      await TransactionManager.submitTransaction(transaction);
+      await EnhancedBlockchainService.processTransactionBatch();
+    } catch (blockchainError) {
+      console.error('Failed to record candidate addition on blockchain:', blockchainError);
+    }
 
     return candidate;
   }
@@ -169,17 +202,29 @@ export class ElectionService {
       receiptCode: vote.receiptCode
     });
 
-    // Add to blockchain if online
+    // Create blockchain transaction for vote if online
     if (!vote.isOffline) {
-      const block = await BlockchainService.addBlock({
-        type: 'vote_cast',
-        voteId: vote.id,
-        electionId: vote.electionId,
-        candidateId: vote.candidateId,
-        signature: voteSignature,
-        timestamp: vote.timestamp
-      });
-      vote.blockchainHash = block.hash;
+      try {
+        const transaction = await TransactionManager.createTransaction(
+          'vote',
+          vote.voterId,
+          {
+            voteId: vote.id,
+            electionId: vote.electionId,
+            candidateId: vote.candidateId,
+            signature: voteSignature,
+            receiptCode: vote.receiptCode
+          }
+        );
+        await TransactionManager.submitTransaction(transaction);
+        const block = await EnhancedBlockchainService.processTransactionBatch();
+        if (block) {
+          vote.blockchainHash = block.hash;
+        }
+      } catch (blockchainError) {
+        console.error('Failed to record vote on blockchain:', blockchainError);
+        // Continue - vote is still stored locally
+      }
     }
 
     await StorageService.addToStore('votes', vote);
@@ -240,17 +285,26 @@ export class ElectionService {
           receiptCode: vote.receiptCode
         });
 
-        const block = await BlockchainService.addBlock({
-          type: 'vote_sync',
-          voteId: vote.id,
-          electionId: vote.electionId,
-          candidateId: vote.candidateId,
-          signature: voteSignature,
-          originalTimestamp: vote.timestamp,
-          syncTimestamp: new Date()
-        });
+        const transaction = await TransactionManager.createTransaction(
+          'vote',
+          vote.voterId,
+          {
+            type: 'vote_sync',
+            voteId: vote.id,
+            electionId: vote.electionId,
+            candidateId: vote.candidateId,
+            signature: voteSignature,
+            originalTimestamp: vote.timestamp,
+            syncTimestamp: new Date()
+          }
+        );
 
-        vote.blockchainHash = block.hash;
+        await TransactionManager.submitTransaction(transaction);
+        const block = await EnhancedBlockchainService.processTransactionBatch();
+        
+        if (block) {
+          vote.blockchainHash = block.hash;
+        }
         vote.syncStatus = 'synced';
         
         await StorageService.updateInStore('votes', vote);
@@ -288,7 +342,7 @@ export class ElectionService {
 
     // Verify blockchain integrity if vote is synced
     if (vote.syncStatus === 'synced' && vote.blockchainHash) {
-      const block = await BlockchainService.getBlockByHash(vote.blockchainHash);
+      const block = await EnhancedBlockchainService.getBlockByHash(vote.blockchainHash);
       if (!block) {
         return { valid: false };
       }

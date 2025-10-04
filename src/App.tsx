@@ -35,6 +35,7 @@ function App() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [voterNIN, setVoterNIN] = useState('');
   const [registrationData, setRegistrationData] = useState<any>(null);
+  const [capturedBiometric, setCapturedBiometric] = useState<{ embedding: number[]; qualityScore: number; livenessScore: number } | null>(null);
   const authProvider = useAuthProvider();
 
   useEffect(() => {
@@ -88,27 +89,34 @@ function App() {
     setCurrentView('biometric-register');
   };
 
-  const handleBiometricSuccess = () => {
+  const handleBiometricSuccess = (biometricData?: { embedding: number[]; qualityScore: number; livenessScore: number }) => {
     if (currentView === 'biometric-login') {
       setCurrentView('voting-dashboard');
     } else if (currentView === 'biometric-register') {
-      // Complete registration with biometric data
-      completeVoterRegistration();
+      // Store captured biometric data and complete registration
+      if (biometricData) {
+        setCapturedBiometric(biometricData);
+      }
+      completeVoterRegistration(biometricData);
     }
   };
 
-  const completeVoterRegistration = async () => {
+  const completeVoterRegistration = async (biometricData?: { embedding: number[]; qualityScore: number; livenessScore: number }) => {
     if (!registrationData) return;
 
     try {
-      // Generate fake biometric embedding for demo
-      const fakeEmbedding = Array.from({length: 128}, () => Math.random());
+      // Require actual biometric data - no synthetic fallback for security
+      const biometric = biometricData || capturedBiometric;
+      
+      if (!biometric) {
+        throw new Error('Biometric capture required for registration. Please complete biometric verification.');
+      }
       
       const result = await VoterDatabaseService.registerVoter({
         ...registrationData,
         dateOfBirth: new Date(registrationData.dateOfBirth),
-        faceEmbedding: fakeEmbedding,
-        biometricQuality: 0.95
+        faceEmbedding: biometric.embedding,
+        biometricQuality: biometric.qualityScore
       });
 
       if (result.success) {
@@ -123,7 +131,9 @@ function App() {
       alert('Registration failed. Please try again.');
       setCurrentView('voter-register');
     } finally {
+      // Clear sensitive data after registration
       setRegistrationData(null);
+      setCapturedBiometric(null);
     }
   };
   if (!isInitialized) {
