@@ -95,6 +95,72 @@ export interface BlockchainBlock {
   previousHash: string;
   hash: string;
   nonce: number;
+  validator?: string;
+  signature?: string;
+  transactions?: BlockchainTransaction[];
+  merkleRoot?: string;
+  gasUsed?: number;
+  difficulty?: number;
+}
+
+export interface BlockchainTransaction {
+  id: string;
+  type: 'vote' | 'election_create' | 'election_update' | 'voter_register' | 'smart_contract';
+  from: string;
+  to?: string;
+  data: any;
+  timestamp: Date;
+  signature: string;
+  status: 'pending' | 'confirmed' | 'failed';
+  blockIndex?: number;
+  gasLimit?: number;
+  gasUsed?: number;
+}
+
+export interface BlockchainNode {
+  id: string;
+  address: string;
+  type: 'validator' | 'peer' | 'light';
+  status: 'active' | 'inactive' | 'syncing';
+  lastSeen: Date;
+  blocksValidated: number;
+  reputation: number;
+  stake?: number;
+}
+
+export interface SmartContract {
+  id: string;
+  name: string;
+  type: 'election_rules' | 'voting_validation' | 'result_calculation';
+  code: string;
+  deployedBy: string;
+  deployedAt: Date;
+  lastExecuted?: Date;
+  executionCount: number;
+  isActive: boolean;
+  parameters?: any;
+}
+
+export interface ConsensusState {
+  mechanism: 'PoA' | 'PoW' | 'PoS';
+  currentValidator?: string;
+  validators: string[];
+  epoch: number;
+  blockTime: number;
+  difficulty: number;
+}
+
+export interface BlockchainMetrics {
+  totalBlocks: number;
+  totalTransactions: number;
+  averageBlockTime: number;
+  transactionsPerSecond: number;
+  networkHashRate: number;
+  activeNodes: number;
+  consensusHealth: 'healthy' | 'degraded' | 'critical';
+  chainValidity: boolean;
+  lastBlockTime: Date;
+  pendingTransactions: number;
 }
 
 export interface ElectionResult {
