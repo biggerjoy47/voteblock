@@ -9,7 +9,8 @@ import {
   LogOut, 
   Menu,
   X,
-  Flag
+  Flag,
+  Network
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -29,6 +30,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
     { name: 'Results', icon: BarChart3, key: 'results' },
     { name: 'Voters', icon: Users, key: 'voters' },
     { name: 'Analytics', icon: BarChart3, key: 'analytics' },
+    { name: 'Blockchain', icon: Network, key: 'blockchain' },
     { name: 'Audit Trail', icon: Shield, key: 'audit' },
     { name: 'Settings', icon: Settings, key: 'settings' }
   ];

@@ -296,7 +296,6 @@ export class BlockchainMonitoringService {
     }> = [];
 
     const metrics = await this.getRealtimeMetrics();
-    const health = await this.getBlockchainHealth();
 
     if (!metrics.chainValidity) {
       anomalies.push({

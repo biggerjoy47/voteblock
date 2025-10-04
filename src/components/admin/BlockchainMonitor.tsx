@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Activity, AlertTriangle, CheckCircle, Database, Network, TrendingUp, Zap } from 'lucide-react';
 import { BlockchainMonitoringService } from '../../services/blockchainMonitoringService';
 import { EnhancedBlockchainService } from '../../services/enhancedBlockchainService';
-import { TransactionManager } from '../../services/transactionManager';
 import { SmartContractService } from '../../services/smartContractService';
 import { BlockchainMetrics } from '../../types';
 
@@ -10,7 +9,7 @@ interface BlockchainMonitorProps {
   onNavigate: (view: string) => void;
 }
 
-export function BlockchainMonitor({ onNavigate }: BlockchainMonitorProps) {
+export function BlockchainMonitor({ }: BlockchainMonitorProps) {
   const [metrics, setMetrics] = useState<BlockchainMetrics | null>(null);
   const [health, setHealth] = useState<any>(null);
   const [validators, setValidators] = useState<any[]>([]);

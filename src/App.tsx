@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { AuthContext, useAuthProvider } from './hooks/useAuth';
 import { SecureStorageService } from './services/secureStorageService';
 import { BlockchainService } from './services/blockchainService';
+import { EnhancedBlockchainService } from './services/enhancedBlockchainService';
+import { TransactionManager } from './services/transactionManager';
+import { SmartContractService } from './services/smartContractService';
+import { BlockchainMonitoringService } from './services/blockchainMonitoringService';
 import { BiometricSecurityService } from './services/biometricSecurityService';
 import { NINValidationService } from './services/ninValidationService';
 import { AuditSecurityService } from './services/auditSecurityService';
@@ -18,6 +22,7 @@ import { ResultsAnalytics } from './components/admin/ResultsAnalytics';
 import { AuditDashboard } from './components/admin/AuditDashboard';
 import { SystemSettings } from './components/admin/SystemSettings';
 import { VoterAnalytics } from './components/admin/VoterAnalytics';
+import { BlockchainMonitor } from './components/admin/BlockchainMonitor';
 import { VoterPortal } from './components/voter/VoterPortal';
 import { VoterLogin } from './components/voter/VoterLogin';
 import { VoterRegister } from './components/voter/VoterRegister';
@@ -50,8 +55,14 @@ function App() {
       // Initialize NIN service
       await NINValidationService.initialize();
       
-      // Initialize blockchain
+      // Initialize legacy blockchain
       await BlockchainService.initializeBlockchain();
+      
+      // Initialize enhanced blockchain system
+      await EnhancedBlockchainService.initializeBlockchain();
+      await TransactionManager.initialize();
+      await SmartContractService.initialize();
+      await BlockchainMonitoringService.initialize();
       
       // Initialize biometric service
       await BiometricSecurityService.initializeModel();
@@ -167,6 +178,7 @@ function App() {
             {currentView === 'results' && <ResultsAnalytics onNavigate={handleNavigate} />}
             {currentView === 'voters' && <VoterManagement onNavigate={handleNavigate} />}
             {currentView === 'analytics' && <VoterAnalytics onNavigate={handleNavigate} />}
+            {currentView === 'blockchain' && <BlockchainMonitor onNavigate={handleNavigate} />}
             {currentView === 'audit' && <AuditDashboard onNavigate={handleNavigate} />}
             {currentView === 'settings' && <SystemSettings onNavigate={handleNavigate} />}
           </Layout>
